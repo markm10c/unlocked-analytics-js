@@ -16,9 +16,6 @@ function isNetworkError(err: unknown): boolean {
   ) {
     return true;
   }
-  if (err instanceof Error && err.message === 'Network request failed') {
-    return true;
-  }
   return false;
 }
 
