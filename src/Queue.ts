@@ -1,6 +1,27 @@
 import type { AnyCall } from './types';
 import type Config from './Config';
 
+const NETWORK_ERROR_MESSAGES = [
+  'Failed to fetch', // Chrome/Edge
+  'NetworkError when attempting to fetch resource', // Firefox
+  'Load failed', // Safari
+  'Network request failed', // React Native
+];
+
+function isNetworkError(err: unknown): boolean {
+  if (
+    err instanceof TypeError &&
+    // .startsWith because Sentry appends the host to the error message
+    NETWORK_ERROR_MESSAGES.some((msg) => err.message.startsWith(msg))
+  ) {
+    return true;
+  }
+  if (err instanceof Error && err.message === 'Network request failed') {
+    return true;
+  }
+  return false;
+}
+
 export default class Queue {
   #config: Config;
   #queue: AnyCall[] = [];
@@ -14,26 +35,16 @@ export default class Queue {
   push(call: AnyCall): void {
     this.#queue = [...this.#queue, call];
     if (!this.#flushTimeout) {
-      this.#flushTimeout = setTimeout(this.flushSafely, 10000);
+      this.#flushTimeout = setTimeout(this.flush, 10000);
     }
     this._checkFlush();
   }
 
   _checkFlush(): void {
     if (this.#queue.length > 10) {
-      this.flushSafely();
+      this.flush();
     }
   }
-
-  /**
-   * Flush without rejecting. Callers that fire and forget must use this -
-   * a rejected flush() with no handler is an unhandled promise rejection.
-   */
-  flushSafely = (): void => {
-    this.flush().catch((err) => {
-      this.#config.options.onFlushError?.(err);
-    });
-  };
 
   flush = async (): Promise<void> => {
     if (!this.#config.endpointUrl) {
@@ -79,6 +90,10 @@ export default class Queue {
       }
 
       this.#queue = this.#queue.slice(batch.length);
+    } catch (err) {
+      if (!isNetworkError(err)) {
+        throw err;
+      }
     } finally {
       this.#flushing = false;
     }

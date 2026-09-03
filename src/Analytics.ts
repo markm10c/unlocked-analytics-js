@@ -23,8 +23,8 @@ export default class Analytics {
   }
 
   mergeOptions(options: ConfigOptions): void {
-    // Force a flush before on old data before the options change
-    this.#queue.flushSafely();
+    // Force a flush on old data before the options change
+    this.#queue.flush();
     this.#config.options = { ...this.#config.options, ...options };
   }
 

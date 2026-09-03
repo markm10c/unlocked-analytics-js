@@ -1,11 +1,6 @@
 export type ConfigOptions = {
   headers?: {};
   credentials?: RequestCredentials;
-  /**
-   * Called when a batch fails to send. The queue keeps the events and retries,
-   * so this is for reporting only.
-   */
-  onFlushError?: (err: Error) => void;
 };
 
 export type ContextFields = {
