@@ -14,16 +14,26 @@ export default class Queue {
   push(call: AnyCall): void {
     this.#queue = [...this.#queue, call];
     if (!this.#flushTimeout) {
-      this.#flushTimeout = setTimeout(this.flush, 10000);
+      this.#flushTimeout = setTimeout(this.flushSafely, 10000);
     }
     this._checkFlush();
   }
 
   _checkFlush(): void {
     if (this.#queue.length > 10) {
-      this.flush();
+      this.flushSafely();
     }
   }
+
+  /**
+   * Flush without rejecting. Callers that fire and forget must use this -
+   * a rejected flush() with no handler is an unhandled promise rejection.
+   */
+  flushSafely = (): void => {
+    this.flush().catch((err) => {
+      this.#config.options.onFlushError?.(err);
+    });
+  };
 
   flush = async (): Promise<void> => {
     if (!this.#config.endpointUrl) {
@@ -59,13 +69,16 @@ export default class Queue {
         method: 'POST',
         body: JSON.stringify(payload),
         headers,
+        ...(this.#config.options.credentials
+          ? { credentials: this.#config.options.credentials }
+          : {}),
       });
 
       if (!response.ok) {
         throw new Error(`Server returned ${response.status}`);
       }
 
-      this.#queue.splice(0, batch.length);
+      this.#queue = this.#queue.slice(batch.length);
     } finally {
       this.#flushing = false;
     }

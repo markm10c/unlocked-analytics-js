@@ -1,5 +1,11 @@
 export type ConfigOptions = {
   headers?: {};
+  credentials?: RequestCredentials;
+  /**
+   * Called when a batch fails to send. The queue keeps the events and retries,
+   * so this is for reporting only.
+   */
+  onFlushError?: (err: Error) => void;
 };
 
 export type ContextFields = {
@@ -33,6 +39,23 @@ export type ContextFields = {
     version?: string;
   };
   locale?: string;
+  os?: {
+    name?: string;
+    version?: string;
+  };
+  page?: {
+    path?: string;
+    referrer?: string;
+    search?: string;
+    title?: string;
+    url?: string;
+  };
+  screen?: {
+    density?: number;
+    height?: number;
+    width?: number;
+  };
+  timezone?: string;
 };
 
 export type CommonFields = {
